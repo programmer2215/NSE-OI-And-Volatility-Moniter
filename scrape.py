@@ -124,9 +124,19 @@ def set_table():
     nifty_50_data = calc()
     i = 0
     no_of_rows = int(row_entry_var.get())
-    data_vol = sorted(nifty_50_data.items(), key=lambda x: x[1][1], reverse=True)[:no_of_rows]
+    default_sort_order = default_selected.get()
+    
+    if default_sort_order == "vol":
+        default_sort_index = 1
+    elif default_sort_order == "OI":
+        default_sort_index = 0
+    
+    data_vol = sorted(nifty_50_data.items(), key=lambda x: x[1][default_sort_index], reverse=True)[:no_of_rows]
+    
     print(data_vol)
+    
     sort_order = selected.get()
+
     if sort_order == "vol":
         sort_index = 1
     elif sort_order == "OI":
@@ -138,10 +148,21 @@ def set_table():
 
 
 selected = tk.StringVar(value="OI")
+filter_lab = tk.Label(frame_top, text="---FILTER---").pack(pady=2)
 r1 = ttk.Radiobutton(frame_top, text='Open Interest', value='OI', variable=selected, command=set_table)
 r1.pack()
 r2 = ttk.Radiobutton(frame_top, text='Volume', value='vol', variable=selected, command=set_table)
-r2.pack()
+r2.pack(pady=10)
+
+frame_filter = tk.Frame(frame_top)
+frame_filter.pack()
+filter_lab = tk.Label(frame_filter, text="---DEFAULT FILTER---").pack(pady=2)
+
+default_selected = tk.StringVar(value="OI")
+r3 = ttk.Radiobutton(frame_filter, text='Open Interest', value='OI', variable=default_selected, command=set_table)
+r3.pack()
+r4 = ttk.Radiobutton(frame_filter, text='Volume', value='vol', variable=default_selected, command=set_table)
+r4.pack()
 
 button = ttk.Button(frame_top, text="Search", command=set_table)
 button.pack(pady=5)
