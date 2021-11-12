@@ -7,6 +7,8 @@ import tkinter as tk
 from tkinter import ttk
 import tkcalendar as tkcal 
 
+# Last Version With Volatility
+
 root = tk.Tk()
 root.title("Volatility & OI Moniter")
 
