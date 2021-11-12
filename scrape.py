@@ -7,10 +7,10 @@ import tkinter as tk
 from tkinter import ttk
 import tkcalendar as tkcal 
 
-# Last Version With Volatility
+# Last Version With Vola
 
 root = tk.Tk()
-root.title("Volatility & OI Moniter")
+root.title("Volume & OI Moniter")
 
 style = ttk.Style()
 style.configure("Treeview", font=('Britannic', 11, 'bold'), rowheight=25)
@@ -35,15 +35,15 @@ frame_top.pack(padx=5, pady=20)
 
 tv = ttk.Treeview(
     frame_top, 
-    columns=(1, 2, 3, 4), 
+    columns=(1, 2, 3), 
     show='headings', 
-    height=10)
+    height=10) # add column 4 when you need to Add Volatility Back (AVB)
 tv.pack()
 
 tv.heading(1, text='Security')
-tv.heading(2, text='Volatility')
-tv.heading(3, text='OI')
-tv.heading(4, text='Volume')
+tv.heading(2, text='OI')
+tv.heading(3, text='Volume')
+#tv.heading(4, text='Volatility')
 
 def delete_data_files(DATA_DIRECTORY):
     datafilelist = [ f for f in os.listdir(DATA_DIRECTORY) if not f == "stocks.txt"]
@@ -61,39 +61,42 @@ def calc():
 
     DATA_DIRECTORY = ".\\Data Files\\"
     OI_URL = f"https://www1.nseindia.com/archives/nsccl/mwpl/nseoi_{day_str}.zip"
-    VOLATILITY_URL = f"https://www1.nseindia.com/archives/nsccl/volt/CMVOLT_{day_str}.CSV"
+
+    #VOLATILITY_URL = f"https://www1.nseindia.com/archives/nsccl/volt/CMVOLT_{day_str}.CSV"
+
     VOLUME_URL = f"https://www1.nseindia.com/content/historical/EQUITIES/{year}/{month}/cm{date_volume}bhav.csv.zip"
     volume_zip_file = dload.save_unzip(VOLUME_URL, f"{DATA_DIRECTORY}", delete_after=True)
     OI_zip_file = dload.save_unzip(OI_URL, f"{DATA_DIRECTORY}", delete_after=True)
 
 
 
-    data = req.get(VOLATILITY_URL)
-    vol_file_name = f"VOLATILITY_{day_str}.csv"
+    """data = req.get(VOLATILITY_URL)
+    vol_file_name = f"VOLATILITY_{day_str}.csv
+    FULL_PATH_VOLATILITY = os.path.join(DATA_DIRECTORY, vol_file_name)
+    """
     oi_file_name = f"nseoi_{day_str}.csv"
     volume_file_name = f"cm{date_volume}bhav.csv"
-    FULL_PATH_VOLATILITY = os.path.join(DATA_DIRECTORY, vol_file_name)
     FULL_PATH_OI = os.path.join(DATA_DIRECTORY, oi_file_name)
     FULL_PATH_VOLUME = os.path.join(DATA_DIRECTORY, volume_file_name)
-    with open(FULL_PATH_VOLATILITY, "wb") as f:
-        f.write(data.content)
+    """with open(FULL_PATH_VOLATILITY, "wb") as f:
+        f.write(data.content)"""
 
     with open("stocks.txt", "r") as f:
         nifty_50 = [stock.strip() for stock in f]
 
     nifty_50_data = {}
 
-    with open(FULL_PATH_VOLATILITY) as f:
+    """with open(FULL_PATH_VOLATILITY) as f:
         csv_reader = csv.reader(f, delimiter=",")
         for row in csv_reader:
             if row[1] in nifty_50:
-                nifty_50_data[row[1]] = [float(row[6])]
+                nifty_50_data[row[1]] = [float(row[6])]"""
 
     with open(FULL_PATH_OI) as f:
         csv_reader = csv.reader(f, delimiter=",")
         for row in csv_reader:
             if row[3] in nifty_50:
-                nifty_50_data[row[3]].append(int(row[5]))
+                nifty_50_data[row[3]] = [int(row[5])] #change assignment to nifty_50_data[row[3]].append(int(row[5])) (AVB)
     
     with open(FULL_PATH_VOLUME) as f:
         csv_reader = csv.reader(f, delimiter=",")
@@ -121,23 +124,23 @@ def set_table():
     nifty_50_data = calc()
     i = 0
     no_of_rows = int(row_entry_var.get())
-    data_vol = sorted(nifty_50_data.items(), key=lambda x: x[1][2], reverse=True)[:no_of_rows]
+    data_vol = sorted(nifty_50_data.items(), key=lambda x: x[1][1], reverse=True)[:no_of_rows]
     print(data_vol)
     sort_order = selected.get()
     if sort_order == "vol":
-        sort_index = 0
-    elif sort_order == "OI":
         sort_index = 1
+    elif sort_order == "OI":
+        sort_index = 0
 
     for k,v in sorted(data_vol, key=lambda x: x[1][sort_index], reverse=True):
-        tv.insert(parent='', index=i, iid=i, values=(k, v[0], v[1], v[2]))
+        tv.insert(parent='', index=i, iid=i, values=(k, v[0], v[1]))
         i += 1
 
 
 selected = tk.StringVar(value="OI")
 r1 = ttk.Radiobutton(frame_top, text='Open Interest', value='OI', variable=selected, command=set_table)
 r1.pack()
-r2 = ttk.Radiobutton(frame_top, text='Volatility', value='vol', variable=selected, command=set_table)
+r2 = ttk.Radiobutton(frame_top, text='Volume', value='vol', variable=selected, command=set_table)
 r2.pack()
 
 button = ttk.Button(frame_top, text="Search", command=set_table)
