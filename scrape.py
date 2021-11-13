@@ -37,7 +37,7 @@ tv = ttk.Treeview(
     frame_top, 
     columns=(1, 2, 3), 
     show='headings', 
-    height=10) # add column 4 when you need to Add Volatility Back (AVB)
+    height=10) # add column 4 when you need to Add Volatility Back
 tv.pack()
 
 tv.heading(1, text='Security')
@@ -52,6 +52,8 @@ def delete_data_files(DATA_DIRECTORY):
 
 def calc():
     day = calender.get_date()
+    is_nifty_50 = var1.get()
+    print(is_nifty_50)
     day_str = day.strftime('%d%m%Y')
 
     #formatting for volume URL
@@ -65,63 +67,66 @@ def calc():
     #VOLATILITY_URL = f"https://www1.nseindia.com/archives/nsccl/volt/CMVOLT_{day_str}.CSV"
 
     VOLUME_URL = f"https://www1.nseindia.com/content/historical/EQUITIES/{year}/{month}/cm{date_volume}bhav.csv.zip"
-    volume_zip_file = dload.save_unzip(VOLUME_URL, f"{DATA_DIRECTORY}", delete_after=True)
-    OI_zip_file = dload.save_unzip(OI_URL, f"{DATA_DIRECTORY}", delete_after=True)
+    dload.save_unzip(VOLUME_URL, f"{DATA_DIRECTORY}", delete_after=True)
+    dload.save_unzip(OI_URL, f"{DATA_DIRECTORY}", delete_after=True)
 
 
-
-    """data = req.get(VOLATILITY_URL)
-    vol_file_name = f"VOLATILITY_{day_str}.csv
-    FULL_PATH_VOLATILITY = os.path.join(DATA_DIRECTORY, vol_file_name)
-    """
     oi_file_name = f"nseoi_{day_str}.csv"
     volume_file_name = f"cm{date_volume}bhav.csv"
     FULL_PATH_OI = os.path.join(DATA_DIRECTORY, oi_file_name)
     FULL_PATH_VOLUME = os.path.join(DATA_DIRECTORY, volume_file_name)
-    """with open(FULL_PATH_VOLATILITY, "wb") as f:
-        f.write(data.content)"""
 
-    with open("stocks.txt", "r") as f:
-        nifty_50 = [stock.strip() for stock in f]
+    stocks_data = {}
 
-    nifty_50_data = {}
+    if is_nifty_50 == 1:
+        with open("stocks.txt", "r") as f:
+            stocks = [stock.strip() for stock in f]
+    else:
+        with open(FULL_PATH_OI) as f:
+            csv_reader = csv.reader(f, delimiter=",")
+            next(csv_reader, None)
+            stocks = [row[3] for row in csv_reader]
 
-    """with open(FULL_PATH_VOLATILITY) as f:
-        csv_reader = csv.reader(f, delimiter=",")
-        for row in csv_reader:
-            if row[1] in nifty_50:
-                nifty_50_data[row[1]] = [float(row[6])]"""
+
+    
 
     with open(FULL_PATH_OI) as f:
         csv_reader = csv.reader(f, delimiter=",")
+
         for row in csv_reader:
-            if row[3] in nifty_50:
-                nifty_50_data[row[3]] = [int(row[5])] #change assignment to nifty_50_data[row[3]].append(int(row[5])) (AVB)
+            if row[3] in stocks:
+                stocks_data[row[3]] = [int(row[5])] #change assignment to nifty_50_data[row[3]].append(int(row[5])) (AVB)
     
     with open(FULL_PATH_VOLUME) as f:
         csv_reader = csv.reader(f, delimiter=",")
         for row in csv_reader:
-            if row[0] in nifty_50:
-                nifty_50_data[row[0]].append(int(row[8]))
+            if row[0] in stocks:
+                stocks_data[row[0]].append(int(row[8]))
 
     delete_data_files(".\\Data Files\\")
-    return nifty_50_data
+    print(len(stocks_data))
+    return stocks_data
 
-calender = tkcal.DateEntry(frame_top, selectmode="day")
-calender.pack(pady=5)
+controls_frame = tk.Frame(root)
+controls_frame.pack()
 
-row_lab = ttk.Label(frame_top, text="Show Rows:")
-row_lab.pack()
+calender_lab = tk.Label(controls_frame, text="Date:")
+calender_lab.grid(row=0, column=0, rowspan=2, pady=5, padx=10)
+calender = tkcal.DateEntry(controls_frame, selectmode="day")
+calender.grid(row=1, column=0, rowspan=2, pady=5, padx=10)
+
+row_lab = ttk.Label(controls_frame, text="Show Rows:")
+row_lab.grid(row=0, column=1, pady=5, rowspan=2, padx=10)
 row_entry_var = tk.StringVar(value="10")
-row_entry = ttk.Entry(frame_top, textvariable=row_entry_var)
-row_entry.pack(pady=5)
+row_entry = ttk.Entry(controls_frame, textvariable=row_entry_var)
+row_entry.grid(row=1, column=1, rowspan=2, pady=5, padx=10)
 
 #print(nifty_50_data)
 
 def set_table():
     for i in tv.get_children():
         tv.delete(i)
-    nifty_50_data = calc()
+    stocks_data = calc()
     i = 0
     no_of_rows = int(row_entry_var.get())
     default_sort_order = default_selected.get()
@@ -131,9 +136,7 @@ def set_table():
     elif default_sort_order == "OI":
         default_sort_index = 0
     
-    data_vol = sorted(nifty_50_data.items(), key=lambda x: x[1][default_sort_index], reverse=True)[:no_of_rows]
-    
-    print(data_vol)
+    data_vol = sorted(stocks_data.items(), key=lambda x: x[1][default_sort_index], reverse=True)[:no_of_rows]
     
     sort_order = selected.get()
 
@@ -148,24 +151,27 @@ def set_table():
 
 
 selected = tk.StringVar(value="OI")
-filter_lab = tk.Label(frame_top, text="---FILTER---").pack(pady=2)
-r1 = ttk.Radiobutton(frame_top, text='Open Interest', value='OI', variable=selected, command=set_table)
-r1.pack()
-r2 = ttk.Radiobutton(frame_top, text='Volume', value='vol', variable=selected, command=set_table)
-r2.pack(pady=10)
+filter_lab = tk.Label(controls_frame, text="---FILTER---").grid(row=0, column=2, pady=5, padx=5)
+r1 = ttk.Radiobutton(controls_frame, text='Open Interest', value='OI', variable=selected, command=set_table)
+r1.grid(row=1, column=2, pady=5, padx=10, sticky=tk.W)
+r2 = ttk.Radiobutton(controls_frame, text='Volume', value='vol', variable=selected, command=set_table)
+r2.grid(row=2, column=2, pady=5, padx=10, sticky=tk.W)
 
-frame_filter = tk.Frame(frame_top)
-frame_filter.pack()
-filter_lab = tk.Label(frame_filter, text="---DEFAULT FILTER---").pack(pady=2)
+
+filter_lab = tk.Label(controls_frame, text="---DEFAULT FILTER---").grid(row=0, column=3, pady=5, padx=10)
 
 default_selected = tk.StringVar(value="OI")
-r3 = ttk.Radiobutton(frame_filter, text='Open Interest', value='OI', variable=default_selected, command=set_table)
-r3.pack()
-r4 = ttk.Radiobutton(frame_filter, text='Volume', value='vol', variable=default_selected, command=set_table)
-r4.pack()
+r3 = ttk.Radiobutton(controls_frame, text='Open Interest', value='OI', variable=default_selected, command=set_table)
+r3.grid(row=1, column=3, pady=5, padx=10, sticky=tk.W)
+r4 = ttk.Radiobutton(controls_frame, text='Volume', value='vol', variable=default_selected, command=set_table)
+r4.grid(row=2, column=3, pady=5, padx=10, sticky=tk.W)
 
-button = ttk.Button(frame_top, text="Search", command=set_table)
-button.pack(pady=5)
+var1 = tk.IntVar(value="1")
+nifty_50_check = ttk.Checkbutton(root, text="Nifty 50", variable=var1)
+nifty_50_check.pack(pady=15)
+
+button = ttk.Button(root, text="Search", command=set_table)
+button.pack(pady=20)
 
 root.mainloop()
 
