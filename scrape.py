@@ -50,6 +50,21 @@ def delete_data_files(DATA_DIRECTORY):
     for file in datafilelist:
         os.remove(os.path.join(DATA_DIRECTORY,file))
 
+def export_csv():
+    day = calender.get_date()
+    day = day.strftime('%d-%m-%Y')
+    EXPORT_FILE = f"SortedData{day}.csv"
+    with open(EXPORT_FILE, 'w', newline='') as f:
+        csv_writer = csv.writer(f, delimiter=",")
+        csv_writer.writerow(["SECURITY", "OPEN INTEREST", "VOLUME"])
+        for line in tv.get_children():
+            row_list = []
+            for value in tv.item(line)['values']:
+                row_list.append(value)
+            csv_writer.writerow(row_list)
+            
+            
+
 def calc():
     day = calender.get_date()
     is_nifty_50 = var1.get()
@@ -65,8 +80,9 @@ def calc():
     OI_URL = f"https://www1.nseindia.com/archives/nsccl/mwpl/nseoi_{day_str}.zip"
 
     #VOLATILITY_URL = f"https://www1.nseindia.com/archives/nsccl/volt/CMVOLT_{day_str}.CSV"
-
+    print(OI_URL)
     VOLUME_URL = f"https://www1.nseindia.com/content/historical/EQUITIES/{year}/{month}/cm{date_volume}bhav.csv.zip"
+    print(VOLUME_URL)
     dload.save_unzip(VOLUME_URL, f"{DATA_DIRECTORY}", delete_after=True)
     dload.save_unzip(OI_URL, f"{DATA_DIRECTORY}", delete_after=True)
 
@@ -148,6 +164,7 @@ def set_table():
     for k,v in sorted(data_vol, key=lambda x: x[1][sort_index], reverse=True):
         tv.insert(parent='', index=i, iid=i, values=(k, v[0], v[1]))
         i += 1
+    
 
 
 selected = tk.StringVar(value="OI")
@@ -170,8 +187,11 @@ var1 = tk.IntVar(value="1")
 nifty_50_check = ttk.Checkbutton(root, text="Nifty 50", variable=var1)
 nifty_50_check.pack(pady=15)
 
-button = ttk.Button(root, text="Search", command=set_table)
-button.pack(pady=20)
+search_button = ttk.Button(root, text="Search", command=set_table)
+search_button.pack(pady=20)
+
+export_button = ttk.Button(root, text="Export", command=export_csv)
+export_button.pack()
 
 root.mainloop()
 
