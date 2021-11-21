@@ -45,8 +45,11 @@ tv.heading(2, text='OI')
 tv.heading(3, text='Volume')
 #tv.heading(4, text='Volatility')
 
-def delete_data_files(DATA_DIRECTORY):
-    datafilelist = [ f for f in os.listdir(DATA_DIRECTORY) if not f == "stocks.txt"]
+def delete_data_files(DATA_DIRECTORY, file_type=None):
+    if not file_type:
+        datafilelist = [ f for f in os.listdir(DATA_DIRECTORY)]
+    else:
+        datafilelist = [ f for f in os.listdir(DATA_DIRECTORY) if f.endswith(file_type)]
     for file in datafilelist:
         os.remove(os.path.join(DATA_DIRECTORY,file))
 
@@ -119,7 +122,9 @@ def calc():
             if row[0] in stocks:
                 stocks_data[row[0]].append(int(row[8]))
 
-    delete_data_files(".\\Data Files\\")
+    delete_data_files(DATADIRECTORY)
+    delete_data_files("./", file_type=".zip")
+    
     print(len(stocks_data))
     return stocks_data
 
