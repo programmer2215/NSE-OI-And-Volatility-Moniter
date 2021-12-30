@@ -10,7 +10,7 @@ import tkcalendar as tkcal
 # Last Version With Vola
 
 root = tk.Tk()
-root.title("Volume & OI Moniter")
+root.title("Futures Volume & OI Moniter")
 
 style = ttk.Style()
 style.configure("Treeview", font=('Britannic', 11, 'bold'), rowheight=25)
@@ -35,14 +35,15 @@ frame_top.pack(padx=5, pady=20)
 
 tv = ttk.Treeview(
     frame_top, 
-    columns=(1, 2, 3), 
+    columns=(1, 2, 3, 4), 
     show='headings', 
     height=10) # add column 4 when you need to Add Volatility Back
 tv.pack()
 
 tv.heading(1, text='Security')
-tv.heading(2, text='OI')
+tv.heading(2, text='OI Cng')
 tv.heading(3, text='Volume')
+tv.heading(4, text='Price Cng %')
 #tv.heading(4, text='Volatility')
 
 def delete_data_files(DATA_DIRECTORY):
@@ -51,17 +52,11 @@ def delete_data_files(DATA_DIRECTORY):
         os.remove(os.path.join(DATA_DIRECTORY,file))
 
 def export_csv():
-    day = calender.get_date()
-    day = day.strftime('%d-%m-%Y')
-    EXPORT_FILE = f"SortedData{day}.csv"
+    EXPORT_FILE = f"C:\\Users\\Administrator\\Desktop\\csv files\\FUTURES\\SortedData.csv"
     with open(EXPORT_FILE, 'w', newline='') as f:
         csv_writer = csv.writer(f, delimiter=",")
-        csv_writer.writerow(["SECURITY", "OPEN INTEREST", "VOLUME"])
         for line in tv.get_children():
-            row_list = []
-            for value in tv.item(line)['values']:
-                row_list.append(value)
-            csv_writer.writerow(row_list)
+            csv_writer.writerow([tv.item(line)['values'][0]])
             
             
 
@@ -77,20 +72,14 @@ def calc():
     date_volume = day.strftime('%d%b%Y').upper()
 
     DATA_DIRECTORY = ".\\Data Files\\"
-    OI_URL = f"https://www1.nseindia.com/archives/nsccl/mwpl/nseoi_{day_str}.zip"
+    VOL_OI_URL = f"https://www1.nseindia.com/content/historical/DERIVATIVES/{year}/{month}/fo{date_volume}bhav.csv.zip"
 
     #VOLATILITY_URL = f"https://www1.nseindia.com/archives/nsccl/volt/CMVOLT_{day_str}.CSV"
-    print(OI_URL)
-    VOLUME_URL = f"https://www1.nseindia.com/content/historical/EQUITIES/{year}/{month}/cm{date_volume}bhav.csv.zip"
-    print(VOLUME_URL)
-    dload.save_unzip(VOLUME_URL, f"{DATA_DIRECTORY}", delete_after=True)
-    dload.save_unzip(OI_URL, f"{DATA_DIRECTORY}", delete_after=True)
+    print(VOL_OI_URL)
+    dload.save_unzip(VOL_OI_URL, f"{DATA_DIRECTORY}", delete_after=True)
 
-
-    oi_file_name = f"nseoi_{day_str}.csv"
-    volume_file_name = f"cm{date_volume}bhav.csv"
-    FULL_PATH_OI = os.path.join(DATA_DIRECTORY, oi_file_name)
-    FULL_PATH_VOLUME = os.path.join(DATA_DIRECTORY, volume_file_name)
+    volume_file_name = f"fo{date_volume}bhav.csv"
+    FULL_PATH_VOLUME_OI = os.path.join(DATA_DIRECTORY, volume_file_name)
 
     stocks_data = {}
 
@@ -98,29 +87,39 @@ def calc():
         with open("stocks.txt", "r") as f:
             stocks = [stock.strip() for stock in f]
     else:
-        with open(FULL_PATH_OI) as f:
+        with open(FULL_PATH_VOLUME_OI) as f:
             csv_reader = csv.reader(f, delimiter=",")
             next(csv_reader, None)
-            stocks = [row[3] for row in csv_reader]
-
-
+            stocks = []
+            for row in csv_reader:
+                if row[1] not in stocks:
+                    stocks.append(row[1])
     
 
-    with open(FULL_PATH_OI) as f:
+    with open(FULL_PATH_VOLUME_OI) as f:
         csv_reader = csv.reader(f, delimiter=",")
 
         for row in csv_reader:
-            if row[3] in stocks:
-                stocks_data[row[3]] = [int(row[5])] #change assignment to nifty_50_data[row[3]].append(int(row[5])) (AVB)
-    
-    with open(FULL_PATH_VOLUME) as f:
-        csv_reader = csv.reader(f, delimiter=",")
-        for row in csv_reader:
-            if row[0] in stocks:
-                stocks_data[row[0]].append(int(row[8]))
+            if row[1] in stocks and row[0] == 'FUTSTK':
+                price_change = round(float(row[8]) - float(row[5]), 2)
+                if int(row[12]) - int(row[13]) != 0:
+                    oi_change_per = round((int(row[13]) / (int(row[12]) - int(row[13])))*100, 2)
+                else:
+                    oi_change_per = 0.0
+                if price_change != 0 and float(row[5]) != 0:
+                    price_change_per = round(((price_change / float(row[5])) * 100), 2)
+                else:
+                    price_change_per = 0.0
+                    
+                if row[1] not in stocks_data:
+                    stocks_data[row[1]] = [[oi_change_per], int(row[10]), price_change_per, row[2]]
+                else:
+                    stocks_data[row[1]][0].append(oi_change_per)
+                    stocks_data[row[1]][1] += int(row[10])
+    for i in stocks_data.keys():
+        stocks_data[i][0] =  max(stocks_data[i][0])
 
-    delete_data_files(".\\Data Files\\")
-    print(len(stocks_data))
+    #delete_data_files(".\\Data Files\\")
     return stocks_data
 
 controls_frame = tk.Frame(root)
@@ -162,12 +161,12 @@ def set_table():
         sort_index = 0
 
     for k,v in sorted(data_vol, key=lambda x: x[1][sort_index], reverse=True):
-        tv.insert(parent='', index=i, iid=i, values=(k, v[0], v[1]))
+        tv.insert(parent='', index=i, iid=i, values=(k, v[0], v[1], v[2]))
         i += 1
     
 
 
-selected = tk.StringVar(value="OI")
+selected = tk.StringVar(value="vol")
 filter_lab = tk.Label(controls_frame, text="---FILTER---").grid(row=0, column=2, pady=5, padx=5)
 r1 = ttk.Radiobutton(controls_frame, text='Open Interest', value='OI', variable=selected, command=set_table)
 r1.grid(row=1, column=2, pady=5, padx=10, sticky=tk.W)
@@ -183,7 +182,7 @@ r3.grid(row=1, column=3, pady=5, padx=10, sticky=tk.W)
 r4 = ttk.Radiobutton(controls_frame, text='Volume', value='vol', variable=default_selected, command=set_table)
 r4.grid(row=2, column=3, pady=5, padx=10, sticky=tk.W)
 
-var1 = tk.IntVar(value="1")
+var1 = tk.IntVar(value="0")
 nifty_50_check = ttk.Checkbutton(root, text="Nifty 50", variable=var1)
 nifty_50_check.pack(pady=15)
 
