@@ -59,7 +59,11 @@ def export_csv():
             csv_writer.writerow([tv.item(line)['values'][0]])
             
 def get_percentage(delta, prev):
-    return(delta/(prev-delta))*100
+    try:
+        percentage = (delta/(prev-delta))*100
+    except ZeroDivisionError:
+        percentage = 0.0
+    return percentage
             
 
 def calc():
