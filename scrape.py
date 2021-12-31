@@ -58,6 +58,8 @@ def export_csv():
         for line in tv.get_children():
             csv_writer.writerow([tv.item(line)['values'][0]])
             
+def get_percentage(delta, prev):
+    return(delta/(prev-delta))*100
             
 
 def calc():
@@ -102,22 +104,19 @@ def calc():
         for row in csv_reader:
             if row[1] in stocks and row[0] == 'FUTSTK':
                 price_change = round(float(row[8]) - float(row[5]), 2)
-                if int(row[12]) - int(row[13]) != 0:
-                    oi_change_per = round((int(row[13]) / (int(row[12]) - int(row[13])))*100, 2)
-                else:
-                    oi_change_per = 0.0
                 if price_change != 0 and float(row[5]) != 0:
                     price_change_per = round(((price_change / float(row[5])) * 100), 2)
                 else:
                     price_change_per = 0.0
                     
                 if row[1] not in stocks_data:
-                    stocks_data[row[1]] = [[oi_change_per], int(row[10]), price_change_per, row[2]]
+                    stocks_data[row[1]] = [int(row[13]), int(row[10]), price_change_per, int(row[12])]
                 else:
-                    stocks_data[row[1]][0].append(oi_change_per)
+                    stocks_data[row[1]][0] += int(row[13])
                     stocks_data[row[1]][1] += int(row[10])
+                    stocks_data[row[1]][-1] += int(row[12])
     for i in stocks_data.keys():
-        stocks_data[i][0] =  max(stocks_data[i][0])
+        stocks_data[i][0] =  get_percentage(stocks_data[i][0], stocks_data[i][-1])
 
     #delete_data_files(".\\Data Files\\")
     return stocks_data
@@ -161,7 +160,7 @@ def set_table():
         sort_index = 0
 
     for k,v in sorted(data_vol, key=lambda x: x[1][sort_index], reverse=True):
-        tv.insert(parent='', index=i, iid=i, values=(k, v[0], v[1], v[2]))
+        tv.insert(parent='', index=i, iid=i, values=(k, round(v[0], 2), v[1], v[2]))
         i += 1
     
 
