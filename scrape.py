@@ -1,13 +1,10 @@
-import requests as req
-from datetime import datetime
 import dload
 import csv
 import os
 import tkinter as tk
 from tkinter import ttk
-import tkcalendar as tkcal 
-
-# Last Version With Vola
+import tkcalendar as tkcal
+import pyperclip
 
 root = tk.Tk()
 root.title("Futures Volume & OI Moniter")
@@ -37,14 +34,33 @@ tv = ttk.Treeview(
     frame_top, 
     columns=(1, 2, 3, 4), 
     show='headings', 
-    height=10) # add column 4 when you need to Add Volatility Back
+    height=10) 
 tv.pack()
 
 tv.heading(1, text='Security')
 tv.heading(2, text='OI Cng')
 tv.heading(3, text='Volume')
 tv.heading(4, text='Price Cng %')
-#tv.heading(4, text='Volatility')
+
+def copy_security():
+    cur_row = tv.focus()
+    pyperclip.copy(tv.item(cur_row)['values'][0])
+
+def copy_row():
+    cur_row = tv.focus()
+    values = [str(value) for value in tv.item(cur_row)['values']]
+    string = ' '.join(values)
+    pyperclip.copy(string)
+
+
+def my_popup(e):
+    right_click_menu.tk_popup(e.x_root, e.y_root)
+
+right_click_menu = tk.Menu(tv, tearoff=False)
+right_click_menu.add_command(label="Copy Security", command=copy_security)
+right_click_menu.add_command(label="Copy Row", command=copy_row)
+
+tv.bind("<Button-3>", my_popup)
 
 def delete_data_files(DATA_DIRECTORY):
     datafilelist = [ f for f in os.listdir(DATA_DIRECTORY) if not f == "stocks.txt"]
@@ -121,7 +137,6 @@ def calc():
                     stocks_data[row[1]][-1] += int(row[12])
     for i in stocks_data.keys():
         stocks_data[i][0] =  get_percentage(stocks_data[i][0], stocks_data[i][-1])
-
     #delete_data_files(".\\Data Files\\")
     return stocks_data
 
@@ -196,5 +211,3 @@ export_button = ttk.Button(root, text="Export", command=export_csv)
 export_button.pack()
 
 root.mainloop()
-
-
